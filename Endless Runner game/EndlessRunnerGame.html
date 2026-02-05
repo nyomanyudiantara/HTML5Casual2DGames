@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Simple Dino Run</title>
+    <style>
+        * { padding: 0; margin: 0; box-sizing: border-box; }
+        body { display: flex; justify-content: center; align-items: center; height: 100vh; background: #f7f7f7; font-family: 'Courier New', Courier, monospace; }
+        #game { width: 100%; height: 100%; border-bottom: 4px solid #000; position: relative; overflow: hidden; background: url('./assets/sky.jpg'); background-repeat: no-repeat; background-size: cover; background-position: bottom center;}
+        
+        .glassmorphism {
+            /* From https://css.glass */
+            background: rgba(255, 255, 255, 0.22);
+            border-radius: 16px;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(8.9px);
+            -webkit-backdrop-filter: blur(8.9px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .game-instruction h2 {
+            font-size: 50px;
+            font-weight: 900;
+            /*text-stroke: 2px #fff;
+            -webkit-text-stroke: 2px #fff;
+*/        }
+
+        .text-score {
+            position: absolute; 
+            right: 20px; 
+            top: 20px; 
+            font-size: 35px; 
+            height: 80px; 
+            width: 80px; 
+            border: 3px solid #000;
+            border-radius: 50%;
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            text-align: center;
+            margin: 0;
+        }
+
+        .image-source-links {
+            position: absolute;
+            top: 80px;
+            left: 10px;
+            display: flex;
+            flex-direction: column; /* This creates the column look */
+            gap: 5px;
+            z-index: 10; /* Ensures it stays above the background */
+        }
+
+        .image-source-links a {
+            text-decoration: none;
+            color: #000;
+            font-size: 12px;
+            padding: 2px 5px;
+            border-radius: 3px;
+            width: fit-content;
+            /* From https://css.glass */
+            background: rgba(255, 255, 255, 0.22);
+            border-radius: 16px;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(8.9px);
+            -webkit-backdrop-filter: blur(8.9px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .image-source-links a:hover {
+            color: #000;
+            background: rgba(255, 255, 255, 0.9);
+        }
+        
+        #runner { 
+            width: 60px; 
+            height: 60px; 
+            position: absolute; 
+            bottom: 0; 
+            left: 50px; 
+        }
+
+        #runner img {
+            width: 100%;
+            height: 100%;
+            display: block;
+            object-fit: contain; /* Ensures the image doesn't stretch weirdly */
+        }
+        #cactus { width: 100px; height: 100px; background-color: transparent; position: absolute; bottom: 0; right: -20px; }
+        #cactus img {
+            width: 100%;
+            height: 100%;
+            display: block;
+            object-fit: contain; /* Ensures the image doesn't stretch weirdly */
+        }
+
+        #cactus .finish-image {
+            display: none;
+        }
+
+        /* When the "finished" class is added, swap the images */
+        #cactus.finished .cactus-image {
+            display: none;
+        }
+
+        #cactus.finished .finish-image {
+            display: block;
+        }
+
+        /* Jump Animation */
+        .animate-jump { animation: jump 0.5s linear; }
+        @keyframes jump {
+            0% { bottom: 0; }
+            30% { bottom: 100px; }
+            70% { bottom: 100px; }
+            100% { bottom: 0; }
+        }
+
+        /* Cactus Movement */
+        .cactus-move { animation: move 1.5s infinite linear; }
+        @keyframes move {
+            0% { right: -20px; }
+            100% { right: 100%; }
+        }
+
+        /* Confetti */
+        .confetti-container {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none;
+            overflow: hidden;
+            display: none; /* Hidden until win */
+            z-index: 1000;
+        }
+
+        .confetti {
+            position: absolute;
+            width: 15px; /* Slightly larger to see the star shape better */
+            height: 15px;
+            animation: fall linear forwards;
+            transition: all linear 0.3s;
+            clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+        }
+
+        @keyframes fall {
+            0% { transform: translateY(-10vh) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+        }
+        /* Continue adding specific styles for more confetti pieces */
+
+    </style>
+</head>
+<body onclick="jump()">
+    <main id="game">
+        <header style="padding: 10px;">
+            <div class="game-instruction">
+                <h2>Press <b>SPACE</b> or <b>ARROW UP</b> to Jump.</h2>
+            </div>
+            <div class="image-source-links">
+                <h3 style="font-size: 34px; font-weight: 700;">Thanks to:</h3>
+                <a href="https://www.flaticon.com/free-icons/cactus" target="_blank" title="cactus icons">Cactus icons created by Freepik - Flaticon</a>
+                <a href="https://www.flaticon.com/free-icons/summer" target="_blank" title="summer icons">Summer icons created by kornkun - Flaticon</a>
+                <a href="https://www.flaticon.com/free-icons/runner" target="_blank" title="runner icons">Runner icons created by Leremy - Flaticon</a>
+                <a href="https://www.flaticon.com/free-icons/finish-line" target="_blank" title="finish line icons">Finish line icons created by Freepik - Flaticon</a>
+                <a href="https://www.freepik.com/free-vector/beautiful-white-cloud-blue-sky-background_27885213.htm#fromView=search&page=1&position=4&uuid=88e2c135-ca36-451b-93e4-2909ae1de893&query=sky" target="_blank">Sky Background - Design by Freepik</a>
+            </div>
+        </header>
+        <section>
+            <div id="runner">
+                <img src="./assets/runner.png"/>
+            </div>
+            <div id="cactus" class="cactus-move">
+                <img class="cactus-image" src="./assets/cactus.png">
+                <img class="finish-image" src="./assets/finish-line.png">
+            </div>
+            <h2 id="score" class="text-score glassmorphism">0</h2>
+        </section>
+        <div id="confetti-wrapper" class="confetti-container"></div>
+    </main>
+
+   <script>
+        const runner = document.getElementById("runner");
+        const cactus = document.getElementById("cactus");
+        const scoreBoard = document.getElementById("score");
+        let score = 0;
+        let cactusCount = 0; 
+        let gameFinished = false;
+
+        // Audio files
+        const jumpSound = new Audio('./assets/super-mario-jump.mp3');
+        const gameOverSound = new Audio('./assets/super-mario-gameover.mp3');
+        const winSound = new Audio('./assets/super-mario-levelup.mp3'); // Add your win song here
+
+        const confettiWrapper = document.getElementById("confetti-wrapper");
+
+        function startConfetti() {
+            confettiWrapper.style.display = "block";
+            const colors = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff'];
+            
+            for (let i = 0; i < 500; i++) {
+                const confetti = document.createElement('div');
+                confetti.className = 'confetti';
+                
+                // Randomize properties
+                // Inside your existing for-loop in startConfetti()
+                confetti.style.left = Math.random() * 100 + "vw";
+                confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                confetti.style.animationDuration = (Math.random() * 2 + 2) + "s";
+                // Add a random delay so they don't all start at once
+                confetti.style.animationDelay = Math.random() * 2 + "s";
+                
+                confettiWrapper.appendChild(confetti);
+            }
+        }
+
+        // Controls
+        document.addEventListener("mousedown", jump);
+        window.addEventListener("keydown", (e) => { if (e.code === "Space" || e.code === "ArrowUp") jump(); });
+
+        function jump() {
+            if (!runner.classList.contains("animate-jump")) {
+                runner.classList.add("animate-jump");
+                jumpSound.currentTime = 0;
+                jumpSound.play().catch(() => {});
+                setTimeout(() => runner.classList.remove("animate-jump"), 500);
+            }
+        }
+
+        // Listen for the end of each cactus loop
+        cactus.addEventListener('animationiteration', () => {
+            if (gameFinished) return; // Stop counting if already won
+
+            cactusCount++;
+            
+            if (cactusCount >= 100) {
+                gameFinished = true;
+                cactus.classList.add("finished"); // Swaps to finish-line.png
+                
+                // Trigger Confetti and Win Music
+                startConfetti();
+                // Play win sound
+                winSound.play().catch(() => {});
+
+                // Stop the game and show win message after the finish line appears
+                setTimeout(() => {
+                    alert("CONGRATULATIONS! You finished the race!");
+                    location.reload();
+                }, 500); 
+            }
+        });
+
+        const isHit = setInterval(() => {
+            let runnerTop = parseInt(window.getComputedStyle(runner).getPropertyValue("top"));
+            let cactusLeft = parseInt(window.getComputedStyle(cactus).getPropertyValue("left"));
+            let gameHeight = document.getElementById("game").clientHeight;
+
+            // Collision logic (only active if game hasn't finished)
+            if (!gameFinished && cactusLeft < 110 && cactusLeft > 0 && runnerTop >= (gameHeight - 110)) {
+                gameOverSound.play().catch(() => {});
+                clearInterval(isHit);
+                setTimeout(() => {
+                    alert("Game Over! Score: " + Math.floor(score));
+                    location.reload();
+                }, 100);
+            } else if (!gameFinished) {
+                score += 0.01;
+                scoreBoard.innerHTML = Math.floor(score);
+            }
+        }, 10);
+    </script>
+</body>
+</html>

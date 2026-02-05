@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Volley Battle AI</title>
+    <style>
+        * {
+            font-family: 'Courier New', Courier, monospace;
+        }
+        body { 
+            margin: 0; 
+            background: #fff; 
+            display: flex; 
+            justify-content: center;
+            width: 100%;
+            height: 100vh; 
+            font-family: sans-serif; 
+            overflow: hidden; 
+            margin-right: auto;
+            margin-left: auto;
+        }
+
+        /* Layout Container */
+        main {
+            position: relative;
+            width: 100%;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Move Introduction & Sources to Top Left */
+        .introduction {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: white;
+            z-index: 100;
+        }
+
+        .introduction h2 {
+            margin: 0;
+            font-size: 16px;
+            font-weight: 400;
+            opacity: 0.8;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 10px 15px;
+            border-radius: 5px;
+            border-left: 4px solid #f1c40f; /* Adds a nice accent */
+            color: black;
+        }
+
+        .image-sources {
+            margin-top: 16px;
+            padding-left: 15px;
+            display: grid;
+            gap: 6px;
+        }
+
+        .image-sources h3 {
+            color: #000;
+            text-decoration: none;
+            font-weight: 900;
+            font-size: 34px; /* Slightly smaller for better UI balance */
+            padding: 0;
+            margin: 0; /* REMOVES default browser spacing */
+            line-height: 1.2; /* Tighter vertical spacing */
+        }
+
+        .image-sources a {
+            color: #3498db;
+            text-decoration: none;
+            font-size: 12px;
+        }
+
+        .image-sources a:hover {
+            text-decoration: underline;
+        }
+
+        /* Fixed size container centered by the body's flexbox */
+        #game-container { 
+            text-align: center;
+            position: relative;
+            justify-content: center;
+            align-items: center;
+            width: 800px; 
+            height: 100%; 
+            background: url('./assets/beach-background.jpg'); 
+            background-size: cover;
+            background-repeat: no-repeat;
+            background-position: bottom center;
+            overflow: hidden;
+            margin-right: auto;
+            margin-left: auto;
+        }
+        
+        .player { position: absolute; width: 80px; height: 100px; bottom: 0; z-index: 2;}
+        .player img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0px 0px 0 white) 
+            drop-shadow(-0px -0px 0 white) 
+            drop-shadow(0px -0px 0 white) 
+            drop-shadow(-0px 0px 0 white);}
+
+        #player2 img { transform: scaleX(-1); }
+
+        #ball { position: absolute; width: 40px; height: 40px; bottom: 200px; z-index: 3;}
+        #ball img { width: 100%; height: 100%; object-fit: contain; }
+
+        #net { 
+            position: absolute; 
+            width: 10px; 
+            height: 120px; /* Slightly taller for better gameplay */
+            bottom: 0; 
+            left: 395px; 
+            z-index: 1;
+
+            /* This creates the mesh pattern */
+            background: 
+                linear-gradient(90deg, rgba(255,255,255,.3) 3px, transparent 3px),
+                linear-gradient(rgba(255,255,255,.3) 3px, transparent 3px),
+                rgba(0, 0, 0, 0.1); /* Light gray background for the mesh area */
+            background-size: 10px 10px; /* Size of the net squares */
+            
+            border-top: 6px solid white; /* The white top tape */
+            border-left: 3px solid #000; /* Left pole */
+            border-right: 3px solid #000; /* Right pole */
+        }
+        
+        .ui { 
+            position: absolute; 
+            top: 50px; 
+            width: 800px; 
+            display: flex; 
+            justify-content: space-around; 
+            color: white; 
+            font-size: 90px; 
+            font-weight: 1000; 
+            pointer-events: none; 
+            z-index: 10;
+        }
+
+        /* Pulsing effect for the leading score */
+        .ui div {
+            transition: transform 0.2s ease;
+        }
+        #p1-score, #p2-score {
+            /*text-shadow: 2px 2px 10px rgba(0,0,0,0.5);*/
+        }
+
+        .stickman { position: relative; width: 100%; height: 100%; }
+
+        /* The Stick Parts - Thicker and smoother */
+        .stickman div {
+            position: absolute;
+            background: #2c3e50; /* Modern dark slate */
+            border-radius: 10px;
+            /* Using box-shadow instead of border for a cleaner "outline" look */
+            box-shadow: 0 0 0 2px #fff; 
+            box-sizing: border-box;
+        }
+
+        /* Bigger Head */
+        .head { 
+            width: 26px; 
+            height: 26px; 
+            border-radius: 50% !important; 
+            left: 27px; 
+            top: 0; 
+            z-index: 2; /* Keeps head in front of torso */
+        }
+
+        /* Thicker Torso */
+        .torso { 
+            width: 10px; 
+            height: 42px; 
+            left: 35px; 
+            top: 24px; 
+            z-index: 1;
+        }
+
+        /* Shoulder Joint */
+        .arm { 
+            width: 7px; 
+            height: 22px; /* Upper arm length */
+            top: 28px; 
+            transform-origin: top center; 
+        }
+
+        /* Elbow Joint & Forearm */
+        .forearm {
+            position: absolute;
+            width: 7px;
+            height: 20px; /* Lower arm length */
+            top: 18px; /* Starts near the end of upper arm */
+            left: 0;
+            transform-origin: top center;
+            background: inherit; /* Matches stickman color */
+            box-shadow: 0 0 0 2px #fff;
+            border-radius: 10px;
+        }
+
+        /* Natural Human Arm Poses */
+        .moving .arm .forearm {
+            animation: elbowBend 0.3s infinite ease-in-out;
+        }
+
+        @keyframes elbowBend {
+            0%, 100% { transform: rotate(20deg); }
+            50% { transform: rotate(60deg); } /* Bends at the elbow while running */
+        }
+
+        /* Jumping/Ready Pose */
+        .jumping .arm.left { transform: rotate(150deg); }
+        .jumping .arm.right { transform: rotate(170deg); }
+        .jumping .forearm { transform: rotate(30deg); } /* Reaching up for the ball */
+
+        /* Smash Pose */
+        .smashing .arm {
+            animation: smashUpper 0.2s ease-out;
+        }
+        .smashing .forearm {
+            animation: smashLower 0.2s ease-out;
+        }
+
+        @keyframes smashUpper {
+            0% { transform: rotate(160deg); }
+            100% { transform: rotate(-20deg); }
+        }
+        @keyframes smashLower {
+            0% { transform: rotate(40deg); }
+            100% { transform: rotate(10deg); }
+        }
+
+        .leg { 
+            width: 8px; 
+            height: 38px; 
+            top: 64px; 
+            transform-origin: top; 
+        }
+
+        /* Adjusting limb placements to hide joints behind torso */
+        .arm.left { left: 36px; transform: rotate(40deg); }
+        .arm.right { left: 36px; transform: rotate(-40deg); }
+        .leg.left { left: 36px; transform: rotate(15deg); }
+        .leg.right { left: 36px; transform: rotate(-15deg); }
+
+        /* Improved Running Animation */
+        @keyframes stickRun {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-6px) rotate(2deg); } /* More vertical bounce */
+        }
+
+        @keyframes legsMove {
+            0%, 100% { transform: rotate(35deg); }
+            50% { transform: rotate(-35deg); }
+        }
+
+        @keyframes armsMove {
+            0%, 100% { transform: rotate(-40deg); }
+            50% { transform: rotate(60deg); }
+        }
+
+        /* Jumping Pose - Dynamic stretching */
+        .jumping .leg.left { transform: rotate(50deg); }
+        .jumping .leg.right { transform: rotate(-20deg); }
+        .jumping .arm { transform: rotate(160deg); } /* Arms up for the ball! */
+
+        /* Smash Effect Class */
+        .smashing .arm {
+            animation: smashHit 0.2s ease-out;
+        }
+
+        @keyframes smashHit {
+            0% { transform: rotate(160deg); }
+            100% { transform: rotate(-20deg); }
+        }
+
+        /* Body Lean & Head Bob */
+        @keyframes bodyLean {
+            0%, 100% { transform: rotate(5deg) translateY(0); }
+            50% { transform: rotate(12deg) translateY(-5px); }
+        }
+
+        @keyframes headBob {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+            50% { transform: translate(3px, 2px) rotate(8deg); }
+        }
+
+        /* Scissor Running - Knees bend by slightly changing height */
+        @keyframes naturalLegs {
+            0% { transform: rotate(-35deg); height: 38px; }
+            50% { transform: rotate(45deg); height: 30px; } 
+            100% { transform: rotate(-35deg); height: 38px; }
+        }
+
+        @keyframes naturalArms {
+            0% { transform: rotate(50deg); }
+            50% { transform: rotate(-30deg); }
+            100% { transform: rotate(50deg); }
+        }
+
+        /* Apply Natural Animations */
+        .moving .stickman { animation: bodyLean 0.3s infinite ease-in-out; }
+        .moving .head { animation: headBob 0.3s infinite ease-in-out; }
+        .moving .leg.left { animation: naturalLegs 0.3s infinite linear; }
+        .moving .leg.right { animation: naturalLegs 0.3s infinite linear -0.15s; } /* Offset */
+        .moving .arm.left { animation: naturalArms 0.3s infinite linear -0.15s; } /* Sync with opposite leg */
+        .moving .arm.right { animation: naturalArms 0.3s infinite linear; }
+
+        /* AI Color (Red) */
+        #player2 .stickman div { background: #c0392b; }
+
+        /* Facing Directions */
+        .face-right { transform: scaleX(1); }
+        .face-left { transform: scaleX(-1); }
+
+        /* Ensure the AI (Player 2) is flipped by default to face left */
+        #player2 { transform: scaleX(-1); }
+        /* If Player 2 moves right, flip it back */
+        #player2.face-right { transform: scaleX(1); }
+        #player2.face-left { transform: scaleX(-1); }
+
+        #player1 { transform: scaleX(-1); }
+        /* If Player 2 moves right, flip it back */
+        #player1.face-right { transform: scaleX(1); }
+        #player1.face-left { transform: scaleX(-1); }
+    </style>
+</head>
+<body>
+
+<main>
+    <header class="introduction">
+        <h2>Press <b>SPACE</b> to 'Smash' & <b>ARROW KEYS</b> to move</h2>
+        <div class="image-sources">
+            <h3>Thanks to:</h3>
+            <a href="https://www.freepik.com/free-vector/tiki-bar-with-tribal-masks-summer-beach_20162334.htm#fromView=search&page=3&position=1&uuid=afd73b39-9761-4362-b821-7941851c9ade&query=beach" target="_blank">Tiki bar - Design by Freepik</a>
+            <a href="https://www.flaticon.com/free-icons/volleyball" title="volleyball icons" target="_blank">Volleyball icons created by inipagistudio - Flaticon</a>
+        </div>
+    </header>
+    <div class="ui">
+        <div id="p1-score">0</div>
+        <div id="p2-score">0</div>
+    </div>
+
+    <div id="game-container">
+        <div id="net"></div>
+        <div id="player1" class="player">
+            <div class="stickman">
+                <div class="head"></div><div class="torso"></div>
+                <div class="arm left">
+                    <div class="forearm"></div>
+                </div>
+                <div class="arm right">
+                    <div class="forearm"></div>
+                </div>
+
+                <div class="leg left"></div><div class="leg right"></div>
+            </div>
+        </div>
+        <div id="player2" class="player">
+            <div class="stickman">
+                <div class="head"></div><div class="torso"></div>
+                <div class="arm left">
+                    <div class="forearm"></div>
+                </div>
+                <div class="arm right">
+                    <div class="forearm"></div>
+                </div>
+                <div class="leg left"></div><div class="leg right"></div>
+            </div>
+        </div>
+        <div id="ball"><img src="./assets/Volleyball-2.png"></div>
+    </div>
+</main>
+<script>
+    const p1 = document.getElementById('player1'), p2 = document.getElementById('player2');
+    const ball = document.getElementById('ball');
+    const s1 = document.getElementById('p1-score'), s2 = document.getElementById('p2-score');
+
+    const scoreSound = new Audio('./assets/applause.mp3');
+    const winSound = new Audio('./assets/win.mp3');
+
+    // ... (Keep existing variables)
+    let isSmashing = false;
+
+    let p1X = 100, p1Y = 0, p1VY = 0;
+    let p2X = 640, p2Y = 0, p2VY = 0;
+    let bX = 380, bY = 250, bVX = 3, bVY = 0, bRotation = 0;
+    
+    let score1 = 0, score2 = 0;
+    const maxScore = 10;
+    let gameOver = false;
+
+    const gravity = 0.25;
+    const friction = 0.99; // Air resistance
+    const keys = {};
+
+    window.onkeydown = (e) => keys[e.code] = true;
+    window.onkeyup = (e) => keys[e.code] = false;
+
+    function resetBall(winner) {
+        if (gameOver) return;
+
+        if (winner === 1) score1++; else score2++;
+        s1.innerText = score1; s2.innerText = score2;
+
+        // Check for Win Condition first
+        if (score1 >= maxScore || score2 >= maxScore) {
+            gameOver = true;
+            
+            // Play Win Sound
+            winSound.currentTime = 0;
+            winSound.play().catch(e => console.log("Audio blocked"));
+
+            const winnerText = score1 >= maxScore ? "Player 1 Wins!" : "AI Wins!";
+            
+            setTimeout(() => {
+                alert(winnerText);
+                location.reload();
+            }, 100);
+            return;
+        }
+
+        // If no one won yet, play regular score sound
+        scoreSound.currentTime = 0;
+        scoreSound.play().catch(e => console.log("Audio blocked"));
+
+        bX = winner === 1 ? 200 : 600;
+        bY = 300; bVY = 0; bVX = 0;
+    }
+
+    function update() {
+        if (gameOver) return; // Stop the game logic if someone won
+
+        // Player 1 Logic (Improved movement)
+        let p1Moving = 0;
+        if (keys['ArrowLeft'] && p1X > 0) { p1X -= 7; p1Moving = -1; }
+        if (keys['ArrowRight'] && p1X < 335) { p1X += 7; p1Moving = 1; }
+        if (keys['ArrowUp'] && p1Y === 0) p1VY = 10;
+
+                // Inside update function
+        let isP1Moving = keys['ArrowLeft'] || keys['ArrowRight'];
+
+        if (p1Y > 0) {
+            p1.classList.add('jumping');
+            p1.classList.remove('moving');
+        } else if (isP1Moving) {
+            p1.classList.add('moving');
+            p1.classList.remove('jumping');
+        } else {
+            p1.classList.remove('moving', 'jumping');
+        }
+
+        // Inside update()
+        let isP2Moving = Math.abs(p2X - (bX - 30)) > 10 && bX > 400;
+
+        if (p2Y > 0) {
+            p2.classList.add('jumping');
+            p2.classList.remove('moving');
+        } else if (isP2Moving) {
+            p2.classList.add('moving');
+            p2.classList.remove('jumping');
+        } else {
+            p2.classList.remove('moving', 'jumping');
+        }
+
+        // --- SMASH LOGIC ---
+        // If Space is pressed and player is in the air
+        if (keys['Space'] && p1Y > 20) {
+            let pCenterX = p1X + 30, pCenterY = p1Y + 30;
+            let bCenterX = bX + 20, bCenterY = bY + 20;
+            
+            let dx = bCenterX - pCenterX;
+            let dy = bCenterY - pCenterY;
+            let distance = Math.sqrt(dx * dx + dy * dy);
+
+            // If player is close enough to ball to smash it
+            if (distance < 70) {
+                bVY = -12; // Slam it down
+                bVX = 10;  // Send it forward fast
+                isSmashing = true;
+                
+                // Visual feedback
+                ball.style.filter = "drop-shadow(0 0 10px red) brightness(1.5)";
+                setTimeout(() => {
+                    ball.style.filter = "none";
+                    isSmashing = false;
+                }, 500);
+            }
+        }
+        
+        p1Y += p1VY;
+        if (p1Y > 0) p1VY -= gravity; else { p1Y = 0; p1VY = 0; }
+        p1.style.left = p1X + 'px'; p1.style.bottom = p1Y + 'px';
+
+        // AI Logic (Smarter Tracking)
+        let targetX = bX - 30;
+        if (bX > 400) {
+            if (p2X < targetX - 5) p2X += 5;
+            else if (p2X > targetX + 5) p2X -= 5;
+            if (bY < 150 && bVY < 0 && p2Y === 0) p2VY = 10;
+        } else {
+            if (p2X < 600) p2X += 3; // Reset to position
+        }
+        p2Y += p2VY;
+        if (p2Y > 0) p2VY -= gravity; else { p2Y = 0; p2VY = 0; }
+        p2.style.left = p2X + 'px'; p2.style.bottom = p2Y + 'px';
+
+        // Ball Physics (Gravity + Air Resistance)
+        bX += bVX; bY += bVY;
+        bVY -= gravity * 0.7;
+        bVX *= friction;
+        bRotation += bVX * 2;
+
+        // Reset visual effect if ball hits floor
+        if (bY < 0) {
+            ball.style.filter = "none";
+            isSmashing = false;
+            resetBall(bX > 400 ? 1 : 2);
+        }
+
+        // Wall & Net Bounces
+        if (bX < 0 || bX > 760) { bVX *= -0.8; bX = bX < 0 ? 0 : 760; }
+        if (bY < 0) resetBall(bX > 400 ? 1 : 2);
+        if (bX > 375 && bX < 405 && bY < 100) { bVX *= -1; bX = bX < 390 ? 375 : 405; }
+
+        // Better Collision Detection
+        const handleCollision = (px, py, pVY, pSideMoving) => {
+            // Calculate center of objects
+            let pCenterX = px + 30, pCenterY = py + 30;
+            let bCenterX = bX + 20, bCenterY = bY + 20;
+            
+            let dx = bCenterX - pCenterX;
+            let dy = bCenterY - pCenterY;
+            let distance = Math.sqrt(dx * dx + dy * dy);
+
+            if (distance < 50) { // Collision radius
+                // 1. Kick ball up
+                bVY = 10 + Math.abs(pVY * 0.5); 
+                // 2. Add horizontal momentum based on hit point + player movement
+                bVX = (dx * 0.25) + (pSideMoving * 2);
+                
+                // Prevent ball from getting stuck inside player
+                bY = py + 55; 
+            }
+        };
+
+        handleCollision(p1X, p1Y, p1VY, p1Moving);
+        handleCollision(p2X, p2Y, p2VY, (bX > p2X ? 1 : -1));
+
+        // Visual Updates
+        ball.style.left = bX + 'px'; 
+        ball.style.bottom = bY + 'px';
+        ball.style.transform = `rotate(${bRotation}deg)`;
+        
+        requestAnimationFrame(update);
+    }
+    update();
+</script>
+</body>
+</html>
