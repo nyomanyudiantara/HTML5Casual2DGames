@@ -1,2 +1,2 @@
 # HTML5Casual2DGames
-These are casual 2D games
+These are two (2) casual 2D games
